@@ -1,0 +1,710 @@
+---
+title: "Statistical inference with the GSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+In this project we are going to do some research based on the data provided by the **General Social Survey (GSS)** which is a sociological survey created and regularly collected since 1972 by the **National Opinion Research Center** at the University of Chicago. It is funded by the **National Science Foundation**. The GSS collects information and keeps a historical record of the concerns, experiences, attitudes, and practices of residents of the United States.
+
+### Loading packages
+
+We use three packages here for the purpose of this project- `dplyr`, `statsr` and `ggplot2`. While `dplyr` allows us to explore the data and perform various operations needed to wrangle and manipulate the same in the way we want to, ggplot2 is used for providing us a better grasp over the insights drawn with the help of graphical techniques like barplots, scatter diagrams, histograms etc. `statsr` is used for basic statistical computation like with the help of functions like `inference`.
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+library(gridExtra)
+```
+
+### Loading data
+
+Let us load the data frame by using the `load` function: 
+
+```{r load-data}
+load("gss.Rdata")
+```
+
+* * *
+
+## Part 1: Data
+
+*"The NORC national probability sample is a stratified, multistage area probability sample of clusters of households in the continental United States. The selection of geographic areas at successive stages is in accordance with the method of probabilities proportional to size (p.p.s.). Furthermore, the clusters of households are divided into replicated subsamples in order to facilitate estimation of the variance of sample estimators of population characteristics."*
+
+The above information was retrieved from thee official webpage of GSS. Here are some facts about the data collection method that were are going to analyse:
+
+  1. The method of sampling used is clearly *multistage* with both *clustering* and  *stratification* happening at different levels. The clusters represent a bunch of households while a stratum represents a particular geographic area. Since, respondents are randomly selected within a stratum, the results obtained can be generalized to the corresponding stratum and the entire sample.
+
+  2. The study is not an experimental study but an observational study (retrospective in nature), so any association between any two (or more) variables does not necessarily imply a causal relationship between the same.
+
+  3. As the previous point discusses, the study is an observational one and not an experimental one so we have no treatment or controlled groups. When we do not have these groups, we cannot randomly assign people to them. That is, causalty cannot be inferred.
+
+  4. Talking about the biases, there is a possibilty of having *non-response* bias where individuals can just refuse to answer the questions. *Convenience bias* is also possible since only households taht get sampled in the clusters are available to us can be picked up for the interview.
+
+* * *
+
+## Part 2: Research question
+
+Before we actually form our research question it is a good idea to view at least the names of our data frame. We do so by using the `names` function. 
+
+```{r view names}
+names(gss)
+```
+
+**Q1) Does religious belief of people affect their confidence in Congress?**
+
+Ideally, both these factors should be independent of each other, in essence, a person's religious belief should not affect their trust in Congress. However, since the study is not experimental we can obviously not make any causal relationship even if there is an association between the two variables. 
+
+
+**Q2) In the 21st century, has there been any change in the ease with which an individual can find a job between the year 2002 and 2012? **
+
+Ideally, there should be a growth in the proportion of poeple who find their job with ease as the years progress. This would help us to rate the degree of development happening in the continent as far as ensuring employment is concerned.  
+
+**Q3) Does being above or below 20 years of age, affect one's considerations of committing suicide under different circumstances?**
+
+Finding the answer to this question will help the government to know the age-group of people that needs more attention in terms of counselling and other mental and physical healthcare facilities. There's no ideal case here. Supporting to commit suicide itself rflects a negative impression of the population's mental and physical health.
+
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+
+
+**Q1) Does religious belief of people affect their confidence in Congress?**
+
+The variables that we need to answer the abov question are: 
+
+`relig`- Categorical variable, which tells us what religion does a person believe in and
+`conlegis`- A categorical variable again. It tells us the degree of confidence an individual has on the Congress.
+
+As a first step what we are interested to find out is number of people from each religious group who also happen to choose one of the three levels of confidence in the congress: 
+
+```{r A1-structuring variables}
+gss %>% 
+  filter(!is.na(relig), !is.na(conlegis)) %>%
+  group_by(relig, conlegis) %>%
+  summarise(count= n())
+```
+
+The above is the data that will be fed to our contigency table. Let us create one, now.
+
+```{r contigency table}
+tab1_ct<- table(gss$relig, gss$conlegis)
+ftable(tab1_ct)
+```
+
+Since, we are going to use *tab1* for creating our plot, we have to rename the levels of the explanatory variable- `relig` with numbers. 
+
+```{r}
+tab1<- table(as.numeric(gss$relig), gss$conlegis)
+ftable(tab1)
+```
+
+
+```{r mosaic plot}
+mosaicplot(tab1, color= c("navy blue", "blue", "light blue"), xlab = "Religion", ylab = "Confidence in Congress", main = "Religion v/s Confidence in Congress", cex.axis = 0.7)
+```
+
+Looking at the above mosaic plot, we find that the 10th religious group on the axis or the Orthodox-Christians has the maximum level of confidence in Congress while the 4th group or the *None* group have the least confidence in Congress. 
+
+
+
+
+**Q2) In the early 21st century, has there been any change in the ease with which an individual can find a job between the year 2002 and 2012?**
+
+For answering this question we use two variables:
+
+`jobfind`- A categorical variable that tells us if it is easy for an individual to find a job that almost pays the same as the current job with the same qualification.
+`year`- A categorical variable again, that gives us the year in which the interview was conducted. 
+
+For a start, let us first create a new table with proper filtrations. 
+
+```{r}
+tab2<- gss%>%
+  filter(!is.na(year), !is.na(jobfind), year %in% c(2002,2012))%>%
+  group_by(year)%>%
+  select(year, jobfind)
+```
+
+The contigency table for the above looks like:
+
+```{r}
+tab2_ct<- table(tab2$year,tab2$jobfind)
+ftable(tab2_ct)
+```
+
+Let us look at the bar plots for these data:
+
+```{r}
+barplot(tab2_ct, beside = T, col = c("#F0033F", "orange"), main = "Ease of finding v/s Year", ylab = "Count", xlab = "Ease", legend.text = c("2002", "2012"), args.legend = list(x = "topleft", bty = "n"))
+```
+
+From the above plot, we come to know that number of people who found it very easy is less in 2012 compared to 2002 and who found it not easy and somewhat easy to get a similar job was more in 20012 than in 2002. The number of people sampled in 2012 was more than the number of people sampled in 2002, so it is not perfectly clear if there has been an improvement at all in the decade. However, we shall see the results when performing our inference.   
+
+
+
+
+**Q3) Does being above or below 20 years of age, affect one's considerations of committing suicide under different circumstances?**
+
+For the purpose of answering out third question, we are going to use five variables:
+
+`age`- A numerical variable, giving us the age of respondents.
+
+`suicide1`- A categorical variable that tells us if the respondent supports commiting Suicide in case suffering from an *incurable disease*.
+
+`suicide2`- A categorical variable that tells us if the respondent supports commiting Suicide in case he/she goes *bankrupt*.
+
+`suicide3`- A categorical variable that tells us if the respondent supports commiting Suicide in case of having a *dishonored family*.
+
+`suicide4`- A categorical variable that tells us if the respondent supports commiting Suicide in case he/she is *tired of living*.
+
+We will have to first categorize the age of respondents into two groups. For this, we are going to introduce a new variable `under20`
+
+```{r}
+gss<- gss%>%
+  mutate(under20= ifelse(age>=20, "No", "Yes"))
+```
+
+Let us prepare the new data frame that we are going to use for the analysis.
+
+```{r}
+tab3<- gss%>%
+  filter(!is.na(suicide1), !is.na(suicide2), !is.na(suicide3), !is.na(suicide4), !is.na(under20))%>%
+  group_by(under20)%>%
+  select(under20, suicide1, suicide2, suicide3, suicide4)
+```
+
+We can now create contigency tables for each of our cases:
+
+```{r}
+tab3_ct1<- table(tab3$under20, tab3$suicide1)
+prop.table(tab3_ct1,1)
+tab3_ct2<- table(tab3$under20, tab3$suicide2)
+prop.table(tab3_ct2,1)
+tab3_ct3<- table(tab3$under20, tab3$suicide3)
+prop.table(tab3_ct3,1)
+tab3_ct4<- table(tab3$under20, tab3$suicide4)
+prop.table(tab3_ct4,1)
+```
+
+It is now, a good idea to view the above data in a barplot as follows:
+
+```{r}
+grid<- matrix(c(1,2,3,4), nrow = 2, ncol = 2, byrow = T)
+  
+tab3_g1<- ggplot(data= tab3)+
+  geom_bar(aes(x= under20, fill= suicide1))+
+  theme_bw()
+
+tab3_g2<- ggplot(data= tab3)+
+  geom_bar(aes(x= under20, fill= suicide2))+
+  theme_bw()
+
+tab3_g3<- ggplot(data= tab3)+
+  geom_bar(aes(x= under20, fill= suicide3))+
+  theme_bw()
+
+tab3_g4<- ggplot(data= tab3)+
+  geom_bar(aes(x= under20, fill= suicide4))+
+  theme_bw()
+
+grid.arrange(tab3_g1, tab3_g2, tab3_g3, tab3_g4)
+```
+
+From these plots we understand that over all not the majority of the population, in either of the age group, support taking ones life unless the reason is an incurable disease. The plots for suicide if bankrupt and the plot for suicide if dishonored family looks almost similar as far as the proportions and counts are concerned.
+ 
+ 
+* * *
+
+## Part 4: Inference
+
+
+
+
+###Q1) Does religious belief of people affect their confidence in Congress?
+
+
+
+####Hypothesis:
+
+
+*H0: The confidence of people in Congress or the legislature and their religious ideologies are independent and they do not affect each other.*
+
+*HA: The confidence of people in Congress or the legislature and their religious ideologies are associated in some ways and one's religious faith may influence their trust in the legislature.*
+
+
+####Method used:
+
+
+The above hypothesis deals with two categorical variables, each with multiple level and is trying to find our any association between the same. Thus, we are going to use the **Chi-Square Test for Independence** for testing the hypothesis.
+
+
+####Checkinng conditions:
+
+**Independence:**
+
+```{r}
+tab1_ct_summed<- addmargins(tab1_ct)
+ftable(tab1_ct_summed)
+```
+
+*Randomly sampled or assigned?*
+
+The statistical method employed for sampling the data by GSS was multistage with stratification and clustering. We, know in stratified sampling method, the cases are *randomly sampled* from each stratum. That satisfies one of our parameters of interest for checking the conditions. 
+
+*Sample size 10% less than of population?*
+
+The toltal number of cases we have is 37482 which is definitely less than 10% of the population, satisfying our second parameter of interest. 
+
+*No overlapping of cases?*
+
+Each cell correspond to a single case. For instance, the row for `Buddhism` having column `A Great Deal` corresponds to only Buddhists having a great deal of confidence in the legislature and nothing else. Thus, condition for atomicity is also satisfied. 
+
+Since, our sample clearly satisfies the above the conditions, we can now be sure independence within and among the groups. 
+
+
+
+**Sample Size**
+
+```{r}
+ftable(tab1_ct_summed)
+```
+
+
+*Does each cell in contigency table have 5 or more cases?*
+
+Looking at the above contigency table, we see that the religious group levels- `Native Americans` and `Other Eastern` **fail** to have enough (5 or greater) cases of `A Great Deal` of confidence in Congress. 
+
+If we notice then the two religious groups form only 27/37482 = 0.0007203458, approx 0.072% of the total population. However, ignoring or eliminating them can give us misleading results. 
+If we try grouping them together, our problems would still *not* be resolved since 2+0 will equal 2 (less than 5) only.
+The next smallest religious group is `Hinduism`. If we can group these three levels together our problem will be resolved but at the cost of some latency of information. However, this still forms the best option that we can consider as the question of our research cannot be solved using other statistical methods like Comparing proportions which can be tedious to work with for this case.
+Hence, we create a new level `H/NA/OE` that will group all the three levels- `Hinduism`, `Native American` and `Other Eastern` together.
+          
+```{r}
+levels(gss$relig)[levels(gss$relig)=="Native American"] <- "H_NA_OE"
+levels(gss$relig)[levels(gss$relig)=="Hinduism"] <- "H_NA_OE"
+levels(gss$relig)[levels(gss$relig)=="Other Eastern"] <- "H_NA_OE"
+
+tab1_ct_new<- table(gss$relig, gss$conlegis)
+tab1_ct_new_summed<- addmargins(tab1_ct_new)
+ftable(tab1_ct_new_summed)
+```
+
+Now, we have successfully manimulated our data let us check if each cell has 5 or more cases. 
+It does. And, with that our condition for sample size is satisfied. 
+
+
+####Performing Inference:
+
+
+Since our data is now tested for the conditions of independence and sample size we can perform our **Chi-Square Test for Independence** on the same. 
+We do so by using the function `chisq.test` on `tab1_ct_new`.
+
+```{r}
+chisq.test(tab1_ct_new)
+```
+
+
+####Interpetting Results:
+
+
+The p-value is < 2.2*10^(-16) which is very, very less compared to a significance level of 0.05 or even 0.01. 
+This provides enough evidence to reject our null hypothesis, H0 and accept the alternative hypothesis HA instead. 
+
+Thus, we can say that *the confidence of people in Congress or the legislature and their religious ideologies are associated in some ways and one's religious faith may influence their trust in the legislature.*
+
+We are not using a confidence interval for this test as there is no confidence interval associated with the same. The p-value here, gives us enough information for testing our hypothesis.
+
+
+
+
+###Q2) In the early 21st century, has there been any change in the ease with which an individual can find a job between the year 2002 and 2012?
+
+
+
+####Hypothesis:
+
+
+*H0: There has been no change since 2002 to 2012 as far as finding equally good job is considered with almost equal pay as the current job with the same level of qualification. Finding job has been the same since 2002 to 2012.*
+
+Mathematically stating:
+ 
+                          p_2002- p_2012 = 0 
+where, p2002 represents the population of 2002 and p2012 represents the population of 2012. 
+
+*HA: There has been a change since 2002 to 2012 as far as finding equally good job is considered with almost equal pay as the current job with the same level of qualification. Finding job in 2012 is different from finding job in 2002.*
+
+Mathematically stating:
+ 
+                          p_2002- p_2012 != 0 
+
+
+####Method used:
+
+
+The above hypothesis deals with two categorical variables, each with multiple level and is trying to find our any difference between the same. It deals with the population and the year they are trying to find equally good jobs in. Thus, we can **compare the proportion** of interest in 2002 and 2012 and test the above hypothesis.
+
+
+####Checkinng conditions:
+
+
+**Independence:**
+
+```{r}
+tab2_ct_summed<- addmargins(tab2_ct)
+ftable(tab2_ct_summed)
+```
+
+*Randomly sampled or assigned?*
+
+The statistical method employed for sampling the data by GSS was multistage with stratification and clustering. We, know in stratified sampling method, the cases are *randomly sampled* from each stratum. That satisfies one of our parameters of interest for checking the conditions and we can be sure of independence within the group.
+
+*Sample size 10% less than of population?*
+
+The toltal number of cases we have is 1338 which is definitely less than 10% of the population, satisfying our second parameter of interest and making us sure of independence within the group.
+
+*Paired data?*
+
+The data that has been collected is not paired as the survey was not conducted with the intention that would require usage of paired data as far as the variables with this case are concerned. This ensures independence between groups. 
+
+
+Since, our sample clearly satisfies the above the conditions, we can now be sure independence within and between the groups.
+
+
+
+**Success-Failure**
+
+```{r}
+ftable(tab2_ct_summed)
+```
+
+From the above table we know that there are three levels for our response variable `jobfind`. In order to make things easier for us, let us categorise the `Very Easy` and `Somewhat Easy` levels in a single level `Easy`. This will be our success count and `Not Easy` will represent our failure count. 
+
+```{r}
+levels(tab2$jobfind)[levels(tab2$jobfind)== "Very Easy"] <- "Easy"
+levels(tab2$jobfind)[levels(tab2$jobfind)== "Somewhat Easy"] <- "Easy"
+```
+
+Now, our contigency table would look like:
+
+```{r}
+tab2_ct_new<- table(tab2$year, tab2$jobfind)
+tab2_ct_new_summed<- addmargins(tab2_ct_new)
+ftable(tab2_ct_new_summed)
+```
+
+From the above tables we can see that the sample size for 2002, say n1, is 573 and for 2012, say n2, is 765. 
+
+Using these data we can check for our success-failure condition but before that let us calculate the value *p_hat_pool* which is nothing but our *pooled proportion.*
+
+We can calculate our p_hat_pool as follows:
+
+```{r}
+n1<- 573
+suc1<- 367
+n2<- 765
+suc2<- 401
+
+p_hat_pool<- (suc1+suc2)/ (n1+n2)
+print(p_hat_pool)
+```
+
+Now, finally let us check our success-failure condition for a hypothesis test comparing two population proportions:
+
+*Is n1 x p_hat_pool and n1 x (1-p_hat_pool) >= 10?*
+
+```{r}
+n1*p_hat_pool
+n1*(1-p_hat_pool)
+```
+
+They definitely are. 
+
+
+*Is n1 x p_hat_pool and n1 x (1-p_hat_pool) >= 10?*
+
+```{r}
+n2*p_hat_pool
+n2*(1-p_hat_pool)
+```
+
+And so are they. 
+
+This proves that our success-failure condition is satisfied we can say that our distribution is *nearly normal* and we can proceed further with our data for inference.
+
+
+####Performing Inference:
+
+
+As we have already seen, our condition for normality, in essence, the success-failure condtions were met. Thus, we can now define our distribution. 
+For doing that, we need two values:
+
+*Our population mean*- Since, this is hypothesis test, we assume the null value to be true. We are going to consider the population mean as the test statistic which will be nothing but equal to 0 just like our null value. 
+
+*Our standard error*- That can be calculated as shown:
+
+```{r}
+SE<- sqrt(((p_hat_pool*(1-p_hat_pool))/n1)+ ((p_hat_pool*(1-p_hat_pool))/n2))
+print(SE)
+```
+
+*Point Estimate*- This refers to the difference between proportion of success in our sample that is, obviously known to us. We can use to view the proportion table of our data to get them:
+
+```{r}
+prop.table(tab2_ct_new,1)
+```
+
+Let us say p1_hat and p2_hat represent the proportion of success for 2002 and 2012 respectively:
+
+```{r}
+p1_hat<- 0.6404887 
+p2_hat<- 0.5241830
+```
+
+
+Finally, our distribution looks like:
+
+            (p1_hat- p2_hat)= N(mean= 0, SE= 0.02732008)
+   
+
+Now, performing our test, we have:
+
+```{r}
+prop.test(tab2_ct_new, alternative = "two.sided", conf.level = 0.99)
+```
+
+
+####Interpetting Results:
+
+
+Since, the p-value here is so very low 2.654e-05, *we reject our null hypothesis in favour of our alternative.*
+
+*That is, there are significant evidence showing that there have been changes in the circumstances, from 2002 to 2012, that have led to finding jobs easily.* 
+
+In other words, *we are 99% confident that if in fact the null hypothesis were true, the probability of there being no difference is 2.654e-05 which is almost negligible to be of any consideration.*
+
+
+
+####Estimating Two-Proportion Difference:
+
+
+Now, that we have done our hypothesis test for comparing the proportions, we can also estimate the difference between the two proportions.
+
+*Is there any real significant difference between the proportion finding it easy to find a similar job in 2002 and in 2012?*
+
+
+####Checking Conditions:
+
+
+**Independence**
+
+
+The conditions for independence has already been tested to satisfaction while doing the hypothesis test. Thus, we rely on the same and say that the data at is independent both within and between the groups, in essence, the data collected in the years 2002 are independent within just like the data collected in 2012 and both these data sets are independent between each other as well.
+
+
+**Success-Failure**
+
+*Is n1 times p1_hat >= 10?*
+
+```{r}
+n1*p1_hat
+```
+
+It definitely is. 
+
+*Is n2 times p2_hat >= 10?*
+
+```{r}
+n2*p2_hat
+```
+Again, it is.
+
+This proves that our success-failure condition is satisfied and we can proceed further with our data for inference. Before, that it is also worth noting that our sample distribution is nearly normal since it satisfies the success-failure conditions. 
+
+
+####Performing Inference on Estimated difference:
+
+
+Before beginning with our actual inference, let us state some important facts that are related to our research:
+
+*Parameter of interest*- The entire population in 2002 and the entire population in 2012. Mathematically, what we are looking for is:
+                              
+                                 p2002 - p2012
+                                    
+where p2002 and p2012 represents the population of 2002 and 2012, respectively. 
+
+*Point estimate*- The sample proportions we observed for the years 2002 and 2012. Mathematically:
+                              
+                                p1_hat - p2_hat
+                                    
+where p1_hat and p2_hat represents the sample proportion from 2002 and 2012, respectively.
+
+
+**Estimating the difference**
+
+When we are estimating the difference between two sample proportions, what we are doing is calculating our confidence interval which is of the form:
+  
+  
+                    point estimate +- margin of error
+                    
+                    
+which, in our case is nothing but:
+
+
+             (p1_hat - p2_hat) +- z_star * SE_(p1_hat- p2_hat) 
+
+
+The z_star represents our critical value. Since, in the hypothesis test our significance level was 0.01, we're going to do a 99% confidence interval test here for making appropriate comparisons between the two tests.  
+
+Let, us do our calculations now:
+
+```{r}
+pt_est<- p1_hat-p2_hat
+z_star<- 2.58
+SE_p1_hat_p2_hat <- sqrt(((p1_hat*(1-p1_hat))/n1)+((p2_hat*(1-p2_hat))/n2))
+
+l_tail<- pt_est- (z_star*SE_p1_hat_p2_hat)
+r_tail<- pt_est+ (z_star*SE_p1_hat_p2_hat)
+
+print(l_tail)
+print(r_tail)
+```
+                
+
+####Interpetting Results:
+
+Therefore we get our 99% confidence interval as:
+
+                          (0.04669885, 0.1859125)
+                          
+*What this means is that we are 99% confident that the proportion of people from 2002 is 4.6% to 18.5% higher than the proportion of people from 2012 who think finding an equally good job is an easy task. *
+
+The difference is not that great but if we look at the proportion at large then this can be a very significant difference. 
+
+
+In order to make a comparison between the hypothesis test and the estimation we just did, let us take a look at the results from the hypothesis test: 
+
+```{r}
+prop.test(tab2_ct_new, alternative = "two.sided", conf.level = 0.99)
+```
+
+The confidence interval we got from the hypothesis test is:
+
+                        (0.04528513, 0.18732617)
+
+which is *not* very different from the confidence interval that we calculated while trying to estimate the difference between the proportions. 
+
+Thus, we are sure that both the hypothesis test and the estimation of difference between the proportion result in the same conclusions. 
+
+
+*From the above results, we can say that the demand for jobs has gone up since 2002 to 2012 and due to this rise, the competetion level has also risen leading to difficulty in finding more or less equally good job like the current job.*  
+
+
+
+
+###Q3) Does being above or below 20 years of age, affect one's considerations of committing suicide under different circumstances?
+
+
+
+####Hypothesis:
+
+
+*H0: There is no difference between the age groups and the conditions in which a person would try to commit suicide. In essence, the age groups and the conditions are indepedent of each other and being in a particular age group doesn't necessarily affect one's choice of committing suicide under a particular condition.*
+
+*HA: The age group a person falls into and the potent condition which she is imposed to, purporting her to take her own life, are associated in nature. In essence, a person belonging to a particular age group is more or less likely to commit suicide under a certain condition.*
+
+
+####Method used:
+
+
+Before we decide the method we are going to employ for the above hypothesis test, let us wrangle our data and form a new table that will be semantically more pronounced and easy to use for our future operations.
+
+```{r}
+ftable(tab3_ct1)
+ftable(tab3_ct2)
+ftable(tab3_ct3)
+ftable(tab3_ct4)
+
+```
+
+The above tables give us the counts of people who would and wouldn't commit suicide under the corresponding situational conditions. 
+What we are interesed in, is the number of "Yes" responses for each of the suicide related variable for our reasearch question. 
+Thus, our new contigency table will only contain the "Yes" counts for each of the above cases.
+
+
+```{r}
+tab3_ct<- matrix(c(14886, 2370, 2413, 4295, 262, 36, 38, 84), ncol = 4, byrow = T)
+colnames(tab3_ct)<- c("Inc Disease", "Bankrupt", "Dishonored Fam", "Tired of living")
+rownames(tab3_ct)<- c("Above 20", "Under 20")
+
+tab3_ct_summed<- addmargins(tab3_ct)
+ftable(tab3_ct_summed)
+```
+
+
+Now, we can say, the above hypothesis deals with two categorical variables namely- *Age group* and *Commit suicide if*, each with multiple levels and is trying to find our any association between the same. Thus, we are going to use the **Chi-Square Test for Independence** for testing our hypothesis.
+
+
+####Checkinng conditions:
+
+**Independence:**
+
+```{r}
+ftable(tab3_ct_summed)
+```
+
+*Randomly sampled or assigned?*
+
+The statistical method employed for sampling the data by GSS was multistage with stratification and clustering. We, know in stratified sampling method, the cases are *randomly sampled* from each stratum. That satisfies one of our parameters of interest for checking the conditions. 
+
+*Sample size 10% less than of population?*
+
+The toltal number of cases we have is 24384 which is definitely less than 10% of the population, satisfying our second parameter of interest. 
+
+*No overlapping of cases?*
+
+Each cell correspond to a single case. For instance, the row for `Above 20` having column `Inc Disease` corresponds to only people falling in the age group above 20 who think they would consider committing suicide if they suffer from an incurable disease. Thus, condition for atomicity is also satisfied. 
+
+Since, our sample clearly satisfies the above the conditions, we can now be sure independence within and among the groups. 
+
+
+
+**Sample Size**
+
+```{r}
+ftable(tab3_ct_summed)
+```
+
+*Does each cell in contigency table have 5 or more cases?*
+
+It does. The smallest value that we can see a cell holfing is 36. That is definitely greater than 5. Thus, our condition for sample size is satisfied. 
+
+
+####Performing Inference:
+
+Since our data is now tested for the conditions of independence and sample size we can perform our **Chi-Square Test for Independence** on the same. 
+We do so by using the function `chisq.test` on `tab3_ct`.
+
+```{r}
+chisq.test(tab3_ct)
+```
+
+
+
+####Interpetting Results:
+
+
+
+The p-value is < 0.5414 which is very, very high compared to a significance level of 0.01 or even 0.05. 
+This provides enough evidence that we *fail to reject* our null hypothesis, H0 and reject the alternative hypothesis HA instead. 
+
+Thus, we can say that *there is no significant difference between the age groups and the conditions in which a person would try to commit suicide. In essence, the age groups and the conditions are indepedent of each other and being in a particular age group doesn't necessarily affect one's choice of committing suicide under a particular condition.*
+
+We are not using a confidence interval for this test as there is no confidence interval associated with the same. The p-value here, gives us enough information for testing our hypothesis.
+
