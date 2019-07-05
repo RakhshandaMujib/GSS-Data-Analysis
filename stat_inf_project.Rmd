@@ -13,7 +13,8 @@ In this project we are going to do some research based on the data provided by t
 
 ### Loading packages
 
-We use three packages here for the purpose of this project- `dplyr`, `statsr` and `ggplot2`. While `dplyr` allows us to explore the data and perform various operations needed to wrangle and manipulate the same in the way we want to, ggplot2 is used for providing us a better grasp over the insights drawn with the help of graphical techniques like barplots, scatter diagrams, histograms etc. `statsr` is used for basic statistical computation like with the help of functions like `inference`.
+We use four packages here for the purpose of this project- `dplyr`, `statsr`, `ggplot2` and `gridExtra`. 
+While `dplyr` allows us to explore the data and perform various operations needed to wrangle and manipulate the same in the way we want to, `ggplot2` is used for providing us a better grasp over the insights drawn with the help of graphical techniques like barplots, scatter diagrams, histograms etc. `statsr` is used for basic statistical computation like with the help of functions like inference and `gridExtra` will be used for representing different plots in a grid like fashion.
 
 ```{r load-packages, message = FALSE}
 library(ggplot2)
